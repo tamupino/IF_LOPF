@@ -32,7 +32,7 @@ if(CornerRadius != False):
                                                              NextFieldEdge.To, CornerRadius, False, True, False,
                                                              rd.ActiveDoc.ModelAbsoluteTolerance,
                                                              rd.ActiveDoc.ModelAbsoluteTolerance)
-        [x[1] for x in FieldBoundaryFilletSet]
+        FieldBoundaryFillet = [x[1] for x in FieldBoundaryFilletSet]
         FieldBoundaryCorners.extend(FieldBoundaryFillet)
         #b.append(FieldBoundaryCurves[0])
         #d.append(FieldBoundaryCurves[1])
