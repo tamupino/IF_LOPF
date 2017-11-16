@@ -104,6 +104,7 @@ FieldWidth = []
 
 if SportType == 0
     FieldLength = 60
+    # also creates a series of other options for the secondary selection
 
 # The Part of the Code that Runs the Functions
 
