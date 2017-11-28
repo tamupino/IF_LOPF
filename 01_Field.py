@@ -112,6 +112,8 @@ def minimumsweep(safety_offset, boundary_curves):
     # minimum diagonal at corner of 2000mm
     rg.Plane.WorldXY
 
+# List of Enums
+
 FieldLength = []
 FieldWidth = []
 FieldCornerRadius = []
@@ -146,24 +148,24 @@ elif SportType == 1:
     SafetyZoneLats = 8.5
 elif SportType == 2:
     # Rugby League
-    FieldLength = []
-    FieldWidth = []
-    FieldCornerRadius = []
-    BoardsDistance = []
-    BoardsHeight = []
-    FocalPointDistance = []
-    FocalPointHeight = []
-    SafetyZoneDistance = []
+    FieldLength = None
+    FieldWidth = None
+    FieldCornerRadius = None
+    BoardsDistance = None
+    BoardsHeight = None
+    FocalPointDistance = None
+    FocalPointHeight = None
+    SafetyZoneDistance = None
 elif SportType == 3:
     # Rugby Union
-    FieldLength = []
-    FieldWidth = []
-    FieldCornerRadius = []
-    BoardsDistance = []
-    BoardsHeight = []
-    FocalPointDistance = []
-    FocalPointHeight = []
-    SafetyZoneDistance = []
+    FieldLength = None
+    FieldWidth = None
+    FieldCornerRadius = None
+    BoardsDistance = None
+    BoardsHeight = None
+    FocalPointDistance = None
+    FocalPointHeight = None
+    SafetyZoneDistance = None
     # also creates a series of other options for the secondary selection
 
 # The Part of the Code that Runs the Functions
