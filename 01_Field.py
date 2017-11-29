@@ -1,6 +1,7 @@
 import Rhino.Geometry as rg
 import math
 import Rhino.RhinoDoc as rd
+import System
 
 a = []
 b = []
@@ -31,6 +32,7 @@ def field(field_length, field_width):
 
 
 def corners(field_boundary_lines, corner_radius):
+    print "Corners Works"
     field_boundary_corners = []
     for i in range(len(field_boundary_lines)):
         field_edge = field_boundary_lines[i]
@@ -42,28 +44,32 @@ def corners(field_boundary_lines, corner_radius):
                                     next_field_edge.ToNurbsCurve(), next_field_edge.To, corner_radius,
                                     False, True, False, rd.ActiveDoc.ModelAbsoluteTolerance,
                                     rd.ActiveDoc.ModelAbsoluteTolerance)
-        field_boundary_fillet = field_boundary_fillet_set[-1]
-        print type(field_boundary_fillet)
+        for i in range( 0, len(field_boundary_fillet_set)):
+            if isinstance(field_boundary_fillet_set[i], rg.ArcCurve):
+                field_boundary_fillet = field_boundary_fillet_set[i]
+                break
         field_boundary_corners.append(field_boundary_fillet)
     field_boundary_sides = []
-    for j in range(len(field_boundary_corners)):
-        field_corner = field_boundary_corners[j]
-        if j < 3:
-            next_field_corner = field_boundary_corners[j+1]
+    for i in range(len(field_boundary_corners)):
+        field_corner = field_boundary_corners[i]
+        if i < 3:
+            next_field_corner = field_boundary_corners[i+1]
         else:
             next_field_corner = field_boundary_corners[0]
-        # FieldCornerEnd =
         field_boundary_side = rg.Line(field_corner.ToNurbsCurve().PointAtEnd,
                               next_field_corner.ToNurbsCurve().PointAtStart).ToNurbsCurve()
         field_boundary_sides.append(field_boundary_side)
     boundary = weave(field_boundary_corners, field_boundary_sides)
     joined_boundary = rg.Curve.JoinCurves(boundary)
+    print len(boundary)
+    if isinstance(joined_boundary, System.Array[rg.Curve]):
+        joined_boundary = joined_boundary[0]
     return boundary, joined_boundary
 
 
 def boards(field_boundary_polyline, boards_distance, boards_height):
     field_boundary_curve = field_boundary_polyline.ToNurbsCurve()
-    if boards_distance is not False:
+    if boards_distance != 0:
         boards_bottom_curve = field_boundary_curve.Offset(rg.Plane.WorldXY, boards_distance,
                               rd.ActiveDoc.ModelAbsoluteTolerance, rg.CurveOffsetCornerStyle.Sharp)[0]
     else:
@@ -72,7 +78,6 @@ def boards(field_boundary_polyline, boards_distance, boards_height):
     boards_surface = rg.Surface.CreateExtrusion(boards_bottom_curve, boards_vertical_vector)
     xform = rg.Transform.Translation(boards_vertical_vector)
     boards_top_curve = boards_bottom_curve.Transform(xform)
-    print type(boards_bottom_curve)
     return boards_surface, boards_top_curve
 
 
@@ -80,7 +85,7 @@ def focalpoint(field_boundary_polyline, focalpoint_distance, focalpoint_height):
     field_boundary_curve = field_boundary_polyline.ToNurbsCurve()
     focalpoint_offset_curve = field_boundary_curve.Offset(rg.Plane.WorldXY, -focalpoint_distance,
                        rd.ActiveDoc.ModelAbsoluteTolerance, rg.CurveOffsetCornerStyle.Sharp)[0]
-    if focalpoint_height is not False:
+    if focalpoint_height != 0:
         focalpoint_vertical_vector = rg.Vector3d(0, 0, focalpoint_height)
         xform = rg.Transform.Translation(focalpoint_vertical_vector)
         focalpoint_curve = focalpoint_offset_curve.Transform(xform)
@@ -89,19 +94,43 @@ def focalpoint(field_boundary_polyline, focalpoint_distance, focalpoint_height):
     return focalpoint_curve
 
 
+
 def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist):
-    centre_of_field = rg.Point(WorldOrigin)
-    for i in len(field_boundary_segments):
-        field_boundary_segment = field_boundary_segments[i]
-        field_boundary_segment_mid = rg.Point.Midpoint(field_boundary_segment)
-        safetyzone_vector = rg.Vector3d(centre_of_field, field_boundary_segment_mid).Unitize()
-        end_vector = rg.Multiply(safetyzone_end_dist, safetyzone_vector)
-        lat_vector = rg.Multiply(safetyzone_lat_dist, safetyzone_vector)
+    safetyzone_segments = []
+    centre_of_field = rg.Point3d.Origin
+    for field_boundary_segment in field_boundary_segments:
+        # field_boundary_segment = field_boundary_segments[i]
+        field_boundary_segment_mid = field_boundary_segment.PointAt(0.5)
+        safetyzone_vector = rg.Vector3d(field_boundary_segment_mid - centre_of_field)
+        safetyzone_vector.Unitize()
+        print safetyzone_vector
+        end_vector = safetyzone_end_dist * safetyzone_vector
+        lat_vector = safetyzone_lat_dist * safetyzone_vector
         end_xform = rg.Transform.Translation(end_vector)
         lat_xform = rg.Transform.Translation(lat_vector)
         # xform = rg.Transform.Translation(safetyzone_vector)
-        safetyzone_segment = field_boundary_segment.Transform(xform)
-        safetyzone_segments.append(safetyzone_segment)
+        safetyzone_segment = field_boundary_segment.Transform(end_xform)
+        safetyzone_segments.append(field_boundary_segment)
+    corner_gaps = rg.LinearDimension(rg.Plane.WorldXY, safetyzone_segments[0], safetyzone_segments[1])
+    if cornergaps > 0:
+        extend_corners = []
+        for i in range(len(field_boundary_lines)):
+            field_edge = field_boundary_lines[i]
+            if i < 3:
+                next_field_edge = field_boundary_lines[i + 1]
+            else:
+                next_field_edge = field_boundary_lines[0]
+            field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge.ToNurbsCurve(), field_edge.To,
+                                                                    next_field_edge.ToNurbsCurve(), next_field_edge.To,
+                                                                    corner_radius,
+                                                                    False, True, False,
+                                                                    rd.ActiveDoc.ModelAbsoluteTolerance,
+                                                                    rd.ActiveDoc.ModelAbsoluteTolerance)
+            for i in range(0, len(field_boundary_fillet_set)):
+                if isinstance(field_boundary_fillet_set[i], rg.Line):
+                    field_boundary_fillet = field_boundary_fillet_set[i]
+                    break
+                extend_corners.append(field_boundary_fillet[0])
     return safetyzone_segments
 
     # for i in range(len(field_boundary_segments)):
@@ -173,18 +202,18 @@ FieldOutput = field(FieldLength, FieldWidth)
 FieldBoundaryPolyline = FieldOutput[0]
 FieldBoundarySegments = FieldOutput[1]
 # if rounded corners, create rounded field corners
-if FieldCornerRadius is not False:
+if FieldCornerRadius != 0:
     Output = corners(FieldBoundarySegments, FieldCornerRadius)
     BoundarySegments = Output[0]
     BoundaryJoinedCurve = Output[1]
     FieldBoundaryPolyline = BoundaryJoinedCurve
     FieldBoundarySegments = BoundarySegments
 # if Offset Focal Point, create offset focal point, else take Field Boundary as focal point
-if FocalPointDistance is not False:
+if FocalPointDistance != 0:
     FocalPointOutput = focalpoint(FieldBoundaryPolyline, FocalPointDistance, FocalPointHeight)
-    FocalPointCurve = FocalPointOutput[0]
+    # FocalPointCurve = FocalPointOutput[0]
 # if Boards, Create Boards
-if BoardsDistance is not False:
+if BoardsDistance != 0:
     BoardsOutput = boards(FieldBoundaryPolyline, BoardsDistance, BoardsHeight)
     BoardsSurface = BoardsOutput[0]
     BoardsTopCurve = BoardsOutput[1]
@@ -193,4 +222,5 @@ if BoardsDistance is not False:
 # if(FocalOffsetDistance != False):
 #    FocalOffset = rg.Curve.Offset(rg.Plane.WorldXY, FocalOffsetDistance, )
 # Build Boundary Area
-# if(SafetyZoneDimensions != False): #not all sports have safety zones, for example hockey
+if(SafetyZoneEnds != False): #not all sports have safety zones, for example hockey
+    SafetyZoneOutput = safetyzone(FieldBoundarySegments, SafetyZoneEnds, SafetyZoneLats)
