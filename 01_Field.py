@@ -38,18 +38,13 @@ def corners(field_boundary_lines, corner_radius):
             next_field_edge = field_boundary_lines[i + 1]
         else:
             next_field_edge = field_boundary_lines[0]
-
-        # FieldEdgeEnd = field_edge.PointAtEnd()
-        # NextFieldEdgeStart = next_field_edge.PointAtStart()
         field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge.ToNurbsCurve(), field_edge.To,
                                     next_field_edge.ToNurbsCurve(), next_field_edge.To, corner_radius,
                                     False, True, False, rd.ActiveDoc.ModelAbsoluteTolerance,
                                     rd.ActiveDoc.ModelAbsoluteTolerance)
         field_boundary_fillet = field_boundary_fillet_set[-1]
+        print type(field_boundary_fillet)
         field_boundary_corners.append(field_boundary_fillet)
-        # b.append(FieldBoundaryCurves[0])
-        # d.append(FieldBoundaryCurves[1])
-        # c.extend(field_boundary_fillet)
     field_boundary_sides = []
     for j in range(len(field_boundary_corners)):
         field_corner = field_boundary_corners[j]
@@ -86,7 +81,7 @@ def focalpoint(field_boundary_polyline, focalpoint_distance, focalpoint_height):
     focalpoint_offset_curve = field_boundary_curve.Offset(rg.Plane.WorldXY, -focalpoint_distance,
                        rd.ActiveDoc.ModelAbsoluteTolerance, rg.CurveOffsetCornerStyle.Sharp)[0]
     if focalpoint_height is not False:
-        focalpoint_vertical_vector = rg.Vector3d(0,0, focalpoint_height)
+        focalpoint_vertical_vector = rg.Vector3d(0, 0, focalpoint_height)
         xform = rg.Transform.Translation(focalpoint_vertical_vector)
         focalpoint_curve = focalpoint_offset_curve.Transform(xform)
     else:
@@ -99,8 +94,12 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
     for i in len(field_boundary_segments):
         field_boundary_segment = field_boundary_segments[i]
         field_boundary_segment_mid = rg.Point.Midpoint(field_boundary_segment)
-        safetyzone_vector = rg.Vector3d(centre_of_field, field_boundary_segment_mid)
-        xform = rg.Transform.Translation(safetyzone_vector)
+        safetyzone_vector = rg.Vector3d(centre_of_field, field_boundary_segment_mid).Unitize()
+        end_vector = rg.Multiply(safetyzone_end_dist, safetyzone_vector)
+        lat_vector = rg.Multiply(safetyzone_lat_dist, safetyzone_vector)
+        end_xform = rg.Transform.Translation(end_vector)
+        lat_xform = rg.Transform.Translation(lat_vector)
+        # xform = rg.Transform.Translation(safetyzone_vector)
         safetyzone_segment = field_boundary_segment.Transform(xform)
         safetyzone_segments.append(safetyzone_segment)
     return safetyzone_segments
