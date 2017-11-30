@@ -111,26 +111,28 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
         # xform = rg.Transform.Translation(safetyzone_vector)
         safetyzone_segment = field_boundary_segment.Transform(end_xform)
         safetyzone_segments.append(field_boundary_segment)
-    corner_gaps = rg.LinearDimension(rg.Plane.WorldXY, safetyzone_segments[0], safetyzone_segments[1])
-    if cornergaps > 0:
-        extend_corners = []
-        for i in range(len(field_boundary_lines)):
-            field_edge = field_boundary_lines[i]
-            if i < 3:
-                next_field_edge = field_boundary_lines[i + 1]
-            else:
-                next_field_edge = field_boundary_lines[0]
-            field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge.ToNurbsCurve(), field_edge.To,
-                                                                    next_field_edge.ToNurbsCurve(), next_field_edge.To,
-                                                                    corner_radius,
-                                                                    False, True, False,
-                                                                    rd.ActiveDoc.ModelAbsoluteTolerance,
-                                                                    rd.ActiveDoc.ModelAbsoluteTolerance)
-            for i in range(0, len(field_boundary_fillet_set)):
-                if isinstance(field_boundary_fillet_set[i], rg.Line):
-                    field_boundary_fillet = field_boundary_fillet_set[i]
-                    break
-                extend_corners.append(field_boundary_fillet[0])
+    print type(safetyzone_segments[0])
+    corner_gaps = safetyzone_segments[0].To.DistanceTo(safetyzone_segments[1].From)
+    print corner_gaps
+    # if cornergaps > 0:
+    #     extend_corners = []
+    #     for i in range(len(field_boundary_lines)):
+    #         field_edge = field_boundary_lines[i]
+    #         if i < 3:
+    #             next_field_edge = field_boundary_lines[i + 1]
+    #         else:
+    #             next_field_edge = field_boundary_lines[0]
+    #         field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge.ToNurbsCurve(), field_edge.To,
+    #                                                                 next_field_edge.ToNurbsCurve(), next_field_edge.To,
+    #                                                                 corner_radius,
+    #                                                                 False, True, False,
+    #                                                                 rd.ActiveDoc.ModelAbsoluteTolerance,
+    #                                                                 rd.ActiveDoc.ModelAbsoluteTolerance)
+    #         for i in range(0, len(field_boundary_fillet_set)):
+    #             if isinstance(field_boundary_fillet_set[i], rg.Line):
+    #                 field_boundary_fillet = field_boundary_fillet_set[i]
+    #                 break
+    #             extend_corners.append(field_boundary_fillet[0])
     return safetyzone_segments
 
     # for i in range(len(field_boundary_segments)):
@@ -211,6 +213,7 @@ if FieldCornerRadius != 0:
 # if Offset Focal Point, create offset focal point, else take Field Boundary as focal point
 if FocalPointDistance != 0:
     FocalPointOutput = focalpoint(FieldBoundaryPolyline, FocalPointDistance, FocalPointHeight)
+
     # FocalPointCurve = FocalPointOutput[0]
 # if Boards, Create Boards
 if BoardsDistance != 0:
