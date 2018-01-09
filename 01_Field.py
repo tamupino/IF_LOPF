@@ -2,6 +2,7 @@ import Rhino.Geometry as rg
 import math
 import Rhino.RhinoDoc as rd
 import System
+import collections
 
 a = []
 b = []
@@ -19,17 +20,6 @@ def weave(weavelist1, weavelist2):
         wovenlist.append(weavelist2[i])
         i += 1
     return wovenlist
-
-
-# Process Functions
-
-def field(field_length, field_width):
-    field_width_interval = rg.Interval(-0.5*field_width, 0.5*field_width)
-    field_length_interval = rg.Interval(-0.5*field_length, 0.5*field_length)
-    field_boundary = rg.Rectangle3d(rg.Plane.WorldXY, field_width_interval, field_length_interval).ToPolyline()
-    field_boundary_lines = field_boundary.GetSegments()
-    return field_boundary, field_boundary_lines
-
 
 def corners(field_boundary_lines, corner_radius):
     print "Corners Works"
@@ -61,10 +51,36 @@ def corners(field_boundary_lines, corner_radius):
         field_boundary_sides.append(field_boundary_side)
     boundary = weave(field_boundary_corners, field_boundary_sides)
     joined_boundary = rg.Curve.JoinCurves(boundary)
-    print len(boundary)
     if isinstance(joined_boundary, System.Array[rg.Curve]):
         joined_boundary = joined_boundary[0]
     return boundary, joined_boundary
+
+def offset(original_curve, offset_distance):
+    print "Offset Works"
+    print type(original_curve)
+    if isinstance(original_curve, collections.Sequence):
+        original_curve = original_curve[0]
+    if isinstance(original_curve, rg.Curve):
+        field_boundary_curve = original_curve
+        print "Option 1"
+    elif isinstance(original_curve, rg.Rectangle3d):
+        original_curve.ToNurbsCurve().Explode()
+        print "Option 2"
+    else:
+        field_boundary_curve = original_curve.ToNurbsCurve()
+        print "Option 3"
+    focalpoint_offset_curve = field_boundary_curve.Offset(rg.Plane.WorldXY, -offset_distance,
+                                                          rd.ActiveDoc.ModelAbsoluteTolerance,
+                                                          rg.CurveOffsetCornerStyle.Sharp)[0]
+    return focalpoint_offset_curve
+# Process Functions
+
+def field(field_length, field_width):
+    field_width_interval = rg.Interval(-0.5*field_width, 0.5*field_width)
+    field_length_interval = rg.Interval(-0.5*field_length, 0.5*field_length)
+    field_boundary = rg.Rectangle3d(rg.Plane.WorldXY, field_width_interval, field_length_interval).ToPolyline()
+    field_boundary_lines = field_boundary.GetSegments()
+    return field_boundary, field_boundary_lines
 
 
 def boards(field_boundary_polyline, boards_distance, boards_height):
@@ -83,9 +99,7 @@ def boards(field_boundary_polyline, boards_distance, boards_height):
 
 
 def focalpoint(field_boundary_polyline, focalpoint_distance, focalpoint_height):
-    field_boundary_curve = field_boundary_polyline.ToNurbsCurve()
-    focalpoint_offset_curve = field_boundary_curve.Offset(rg.Plane.WorldXY, -focalpoint_distance,
-                       rd.ActiveDoc.ModelAbsoluteTolerance, rg.CurveOffsetCornerStyle.Sharp)[0]
+    focalpoint_offset_curve = offset(field_boundary_polyline, focalpoint_distance)
     if focalpoint_height != 0:
         focalpoint_vertical_vector = rg.Vector3d(0, 0, focalpoint_height)
         xform = rg.Transform.Translation(focalpoint_vertical_vector)
@@ -93,7 +107,6 @@ def focalpoint(field_boundary_polyline, focalpoint_distance, focalpoint_height):
     else:
         focalpoint_curve = focalpoint_offset_curve
     return focalpoint_curve
-
 
 
 def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist):
@@ -104,7 +117,6 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
         field_boundary_segment_mid = field_boundary_segment.PointAt(0.5)
         safetyzone_vector = rg.Vector3d(field_boundary_segment_mid - centre_of_field)
         safetyzone_vector.Unitize()
-        print safetyzone_vector
         if safetyzone_vector.X != 0:
             lat_vector = safetyzone_lat_dist * safetyzone_vector
             lat_xform = rg.Transform.Translation(lat_vector)
@@ -115,9 +127,7 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
             safetyzone_segment = field_boundary_segment.Transform(end_xform)
         # xform = rg.Transform.Translation(safetyzone_vector)
         safetyzone_segments.append(field_boundary_segment)
-    print type(safetyzone_segments[0])
     corner_gaps = safetyzone_segments[0].To.DistanceTo(safetyzone_segments[1].From)
-    print corner_gaps
     if corner_gaps > 0:
         extend_corners = []
         for i in range(len(safetyzone_segments)):
@@ -143,9 +153,17 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
     # for i in range(len(field_boundary_segments)):
 
 
-def minimumsweep(safety_offset, boundary_curves):
-    # minimum diagonal at corner of 2000mm
-    rg.Plane.WorldXY
+# def sectionframes(boundary_curves):
+#     minimum_zone_offset = 0.75
+#     minimum_offset_radius = minimum_zone_offset * math.pi
+#     safetyzone_offset_curve = offset(boundary_curves, minimum_zone_offset)
+#     corners_output = corners(safetyzone_offset_curve, minimum_offset_radius)
+#     BoundarySegments = corners_output[0]
+#     BoundaryJoinedCurve = corners_output[1]
+
+
+# Simplify Curve
+
 
 # List of Enums
 
@@ -230,5 +248,18 @@ if BoardsHeight != 0:
 # if(FocalOffsetDistance != False):
 #    FocalOffset = rg.Curve.Offset(rg.Plane.WorldXY, FocalOffsetDistance, )
 # Build Boundary Area
-if(SafetyZoneEnds != False): #not all sports have safety zones, for example hockey
+if SafetyZoneEnds != False:  #not all sports have safety zones, for example hockey
     SafetyZoneOutput = safetyzone(FieldBoundarySegments, SafetyZoneEnds, SafetyZoneLats)
+    RawSeatingCurve = SafetyZoneOutput
+else:
+    RawSeatingCurve = FieldBoundaryPolyline
+# Default minimum sweep curve, to derive perp frames
+# sectionframes(SafetyZoneOutput)
+minimum_zone_offset = 0.75
+minimum_offset_radius = minimum_zone_offset * math.pi
+SeatingOriginCurve = offset(RawSeatingCurve, minimum_zone_offset)
+SeatingOriginCurves = rg.PolyCurve.Explode(SeatingOriginCurve)
+print SeatingOriginCurves
+corners_output = corners(SeatingOriginCurves, minimum_offset_radius)
+BoundarySegments = corners_output[0]
+BoundaryJoinedCurve = corners_output[1]
