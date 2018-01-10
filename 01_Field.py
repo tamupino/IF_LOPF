@@ -22,9 +22,13 @@ def weave(weavelist1, weavelist2):
     return wovenlist
 
 
-def corners(field_boundary_lines, corner_radius):
+def corners(field_boundary_input, corner_radius):
     print "Corners Works"
     field_boundary_corners = []
+    if isinstance(field_boundary_input, rg.Rectangle3d):
+        field_boundary_lines = field_boundary_input.ToNurbsCurve().DuplicateSegments()
+    else:
+        field_boundary_lines = field_boundary_input
     for i in range(len(field_boundary_lines)):
         field_edge = field_boundary_lines[i]
         if i < 3:
@@ -39,7 +43,6 @@ def corners(field_boundary_lines, corner_radius):
                                     next_field_edge, next_field_edge.PointAtEnd, corner_radius,
                                     False, True, False, rd.ActiveDoc.ModelAbsoluteTolerance,
                                     rd.ActiveDoc.ModelAbsoluteTolerance)
-        print field_boundary_fillet_set
         for i in range( 0, len(field_boundary_fillet_set)):
             if isinstance(field_boundary_fillet_set[i], rg.ArcCurve):
                 field_boundary_fillet = field_boundary_fillet_set[i]
@@ -64,7 +67,6 @@ def corners(field_boundary_lines, corner_radius):
 
 def offset(original_curve, offset_distance):
     print "Offset Works"
-    print type(original_curve)
     if isinstance(original_curve, collections.Sequence):
         original_curve = original_curve[0]
     if isinstance(original_curve, rg.Curve):
@@ -160,7 +162,16 @@ def safetyzone(field_boundary_segments, safetyzone_end_dist, safetyzone_lat_dist
         safetyzone_rect = rg.Rectangle3d(rg.Plane.WorldXY,extend_corners[0], extend_corners[2])
     return safetyzone_rect
 
-    # for i in range(len(field_boundary_segments)):
+
+def perpframes(input_list):
+    section_frames = []
+    for i in range(len(input_list)):
+        input_item = input_list[i]
+        input_item.Domain = rg.Interval(0, 1)
+        section_frame = input_item.PerpendicularFrameAt(0.0)[1]
+        print type(section_frame)
+        section_frames.append(section_frame)
+    return section_frames
 
 
 # def sectionframes(boundary_curves):
@@ -210,6 +221,17 @@ elif SportType == 1:
     SafetyZoneEnds = 10
     SafetyZoneLats = 8.5
 elif SportType == 2:
+    # EUFA Football
+    FieldLength = 105
+    FieldWidth = 68
+    FieldCornerRadius = 0
+    BoardsDistance = 4
+    BoardsHeight = 1
+    FocalPointDistance = 0
+    FocalPointHeight = 0
+    SafetyZoneEnds = 10
+    SafetyZoneLats = 8.5
+elif SportType == 3:
     # Rugby League
     FieldLength = None
     FieldWidth = None
@@ -219,8 +241,28 @@ elif SportType == 2:
     FocalPointDistance = None
     FocalPointHeight = None
     SafetyZoneDistance = None
-elif SportType == 3:
+elif SportType == 4:
     # Rugby Union
+    FieldLength = None
+    FieldWidth = None
+    FieldCornerRadius = None
+    BoardsDistance = None
+    BoardsHeight = None
+    FocalPointDistance = None
+    FocalPointHeight = None
+    SafetyZoneDistance = None
+elif SportType == 5:
+    # Basketball
+    FieldLength = None
+    FieldWidth = None
+    FieldCornerRadius = None
+    BoardsDistance = None
+    BoardsHeight = None
+    FocalPointDistance = None
+    FocalPointHeight = None
+    SafetyZoneDistance = None
+elif SportType == 6:
+    # American Football
     FieldLength = None
     FieldWidth = None
     FieldCornerRadius = None
@@ -264,12 +306,14 @@ if SafetyZoneEnds != False:  #not all sports have safety zones, for example hock
 else:
     RawSeatingCurve = FieldBoundaryPolyline
 # Default minimum sweep curve, to derive perp frames
-# sectionframes(SafetyZoneOutput)
 minimum_zone_offset = 0.75
 minimum_offset_radius = minimum_zone_offset * math.pi
-SeatingOriginCurve = offset(RawSeatingCurve, minimum_zone_offset)
-SeatingOriginCurves = rg.PolyCurve.Explode(SeatingOriginCurve)
+# SeatingOriginCurve = offset(RawSeatingCurve, minimum_zone_offset)
+# SeatingOriginCurves = rg.PolyCurve.Explode(SeatingOriginCurve)
 if FieldCornerRadius == 0:
-    corners_output = corners(SeatingOriginCurves, minimum_offset_radius)
+    corners_output = corners(RawSeatingCurve, minimum_offset_radius)
     BoundarySegments = corners_output[0]
     BoundaryJoinedCurve = corners_output[1]
+else:
+    BoundarySegments = RawSeatingCurve.DuplicateSegments()
+SectionFrames = perpframes(BoundarySegments)
