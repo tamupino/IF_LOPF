@@ -21,6 +21,7 @@ def weave(weavelist1, weavelist2):
         i += 1
     return wovenlist
 
+
 def corners(field_boundary_lines, corner_radius):
     print "Corners Works"
     field_boundary_corners = []
@@ -30,10 +31,15 @@ def corners(field_boundary_lines, corner_radius):
             next_field_edge = field_boundary_lines[i + 1]
         else:
             next_field_edge = field_boundary_lines[0]
-        field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge.ToNurbsCurve(), field_edge.To,
-                                    next_field_edge.ToNurbsCurve(), next_field_edge.To, corner_radius,
+        if isinstance(next_field_edge, rg.Curve) != True:
+            next_field_edge = next_field_edge.ToNurbsCurve()
+        if isinstance(field_edge, rg.Curve) != True:
+            field_edge = field_edge.ToNurbsCurve()
+        field_boundary_fillet_set = rg.Curve.CreateFilletCurves(field_edge, field_edge.PointAtEnd,
+                                    next_field_edge, next_field_edge.PointAtEnd, corner_radius,
                                     False, True, False, rd.ActiveDoc.ModelAbsoluteTolerance,
                                     rd.ActiveDoc.ModelAbsoluteTolerance)
+        print field_boundary_fillet_set
         for i in range( 0, len(field_boundary_fillet_set)):
             if isinstance(field_boundary_fillet_set[i], rg.ArcCurve):
                 field_boundary_fillet = field_boundary_fillet_set[i]
@@ -55,6 +61,7 @@ def corners(field_boundary_lines, corner_radius):
         joined_boundary = joined_boundary[0]
     return boundary, joined_boundary
 
+
 def offset(original_curve, offset_distance):
     print "Offset Works"
     print type(original_curve)
@@ -64,7 +71,7 @@ def offset(original_curve, offset_distance):
         field_boundary_curve = original_curve
         print "Option 1"
     elif isinstance(original_curve, rg.Rectangle3d):
-        original_curve.ToNurbsCurve().Explode()
+        field_boundary_curve = original_curve.ToNurbsCurve()
         print "Option 2"
     else:
         field_boundary_curve = original_curve.ToNurbsCurve()
@@ -73,7 +80,10 @@ def offset(original_curve, offset_distance):
                                                           rd.ActiveDoc.ModelAbsoluteTolerance,
                                                           rg.CurveOffsetCornerStyle.Sharp)[0]
     return focalpoint_offset_curve
+
+
 # Process Functions
+
 
 def field(field_length, field_width):
     field_width_interval = rg.Interval(-0.5*field_width, 0.5*field_width)
@@ -259,7 +269,7 @@ minimum_zone_offset = 0.75
 minimum_offset_radius = minimum_zone_offset * math.pi
 SeatingOriginCurve = offset(RawSeatingCurve, minimum_zone_offset)
 SeatingOriginCurves = rg.PolyCurve.Explode(SeatingOriginCurve)
-print SeatingOriginCurves
-corners_output = corners(SeatingOriginCurves, minimum_offset_radius)
-BoundarySegments = corners_output[0]
-BoundaryJoinedCurve = corners_output[1]
+if FieldCornerRadius == 0:
+    corners_output = corners(SeatingOriginCurves, minimum_offset_radius)
+    BoundarySegments = corners_output[0]
+    BoundaryJoinedCurve = corners_output[1]
