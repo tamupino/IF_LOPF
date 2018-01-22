@@ -33,17 +33,13 @@ import locale
 
 ########################## USER DEFINED VARIABLES #############################
 
-eye_height = 800
-head_back = 0
+# eye_height = 800
+# head_back = 0
 Default_CValue = 150
 Row_Max_Distance = 850
 
 ###############################################################################
 
-""" This function takes a list of curves from rhino (these are the seat
-families found in the Revit Bowl model) and finds the centerpoint of the seat.
-This should be an extremely simple operation, but for some reason, the seats
-coming out of Revit have a habbit of getting fucked up during export/import. """
 
 def F_seatImportFromCurves():
 
@@ -55,44 +51,17 @@ def F_seatImportFromCurves():
     L_seats_high_count = []
     L_seat_verts = []
 
-    """ This is a simple check that works with the function return and prevents
-    the function from crashing if it doesnt evaluate properly.  If the function
-    works, we will keep the Test variable set to True. If something goes wrong and
-    the function is not able to complete, the Test variable will get set to False. At
-the end of the function there will be a check to determine what "Test" is set
-    to.  If it's still True, the function will return the specified list. If it is
-    False, the function will return nothing. """
     Test = True
 
     #Parse through the incoming curves (for each object in the range of the number of objects)
     for i in range (0, len(Seats)):
         myPath = GH_Path(i)
 
-        """We want to find out how many curves are in each "Seats" object (Each seat
-        should have exactly 4 curves.) First we need to test if the incoming curves
-        from the "Seats" variable are actually polylines.  If they're not polylines
-        we cannot break it up into sections as easily. Note: there is no operation
-        included in this function that will handle non-polyline curves.  So...
-        hope they're polylines
-        ------------------------------------------------------------------------
-        FYI: The variable assignment below could have also been written as:
-        seat_crv_test = Seats[i].TryGetPolyline().  This is because "Seats[i]" is
-        a curve object and the "TryGetPolyline" is method that operates on a curve.
-        The "i" here represents the "i'th" object in a list.  This is not a Python
-        keyword, and could really be named anything as long as it's consistent"""
-
         seat_crv_test = Rhino.Geometry.Curve.TryGetPolyline(Seats[i])
         #print seat_crv_test
 
-        """The "TryGetPolyline" method asks for a curve and returns two things:
-        The first item (represented by appending [0]) is a boolean determining
-        whether the item passed as a polyline, and the second item ([1]) returns
-        the polyline itself.  In this first IF statement we're saying: "If the
-        curve is actually a polyline, get the number of segments it contains """
-
         if seat_crv_test[0]:
-            """ The variable assignment below could have also been written as:
-            seat_segments = Rhino.Geometry.Polyline.GetSegments(seat_crv_test[1]) """
+
             seat_segments = seat_crv_test[1].GetSegments()
 
             if len(seat_segments) == 4:
@@ -108,53 +77,14 @@ the end of the function there will be a check to determine what "Test" is set
                 L_seats_low_count.append(Seats[i])
 
             elif len(seat_segments) > 4:
-                """This puts all the seats with greater than expected vertices into a list
-                It's moderately useful to have all the seat curves together in a list, but
-                what's really important is the centroids of the seats.  Since the broken
-                seat curves have no centroids, the next few operations will generate them in
-                a series of steps, and then add them to the list of the existing centroids """
-                L_seats_high_count.append(Seats[i])
-                """This line creates a list of lists. According to the rhinocommon documentation
-                a polyline is really just a list of points, so using the "list()" operation
-                and setting it == to a new list ends up creating a list of lists.  If you
-                try to visualize this in the GH output you will get an error because the list
-                still needs to be translated into something GH understands - i.e. a branched
-                path of points. If needed, this can be done by iterating through the points in
-                "L_seat_verts" and adding them to a path that you've created."""
-                L_seat_verts = list(seat_crv_test[1])
-
-                """ The next step is to construct a new centroid for the seats that
-                failed the test. To do this we will isolate the midpoints of the
-                curve segments that represent the "front" of the seat and move that
-                point to the correct centroid location.  In order to get these directions
-                relative to the INDIVIDUAL orientation of each seat, we will create
-                a coordinate system for each group of bad seats and pull off the required
-                vectors"""
-
-                """ We will build the remapping plane from an origin point and two vectors.
-                The origin is the first point in the polyline object and the two
-                vectors will be pulled from the start/end points of two of the seats edges
-                The next few variables are not lists because for every seat we need
-                one corresponding property"""
+                         L_seats_high_count.append(Seats[i])
+                         L_seat_verts = list(seat_crv_test[1])
                 remap_plane_originPt = L_seat_verts[0]
-
-                """When you subtract a point from a point you get a vector. We need both vectors to
-                create the plane, but only need one to define which way the point needs to move
-                to create the new centroid."""
                 remap_plane_vect1 = (Rhino.Geometry.Vector3d(L_seat_verts[0]-L_seat_verts[1]))
-
-                """This vector starts at the beginning of the polyline and wants the last point in the
-                group. Normally that would be index [-1] but in this case there is a start and an
-                end to the polylines and they occupy the same place in space. therefore: [-2] """
                 remap_plane_vect2 = (Rhino.Geometry.Vector3d(L_seat_verts[0]-L_seat_verts[-2]))
 
                 # This creates the new coordinate plane for each seat object
                 remap_plane = Rhino.Geometry.Plane(remap_plane_originPt,remap_plane_vect1,remap_plane_vect2)
-
-                """Eventually we want to sort these physical seat curve midpoints
-                by their locations relative to the Y value of the remapped plane.
-                This will tell us which midpoints are at the front of the seat.
-                We can then isolate those points and move them back to where the centroid should/would be. """
 
                 # These new lists will be used to collect the information off of the seat segments
                 L_seat_segment_midpoint = []
@@ -371,7 +301,7 @@ def CValue_Calc(SORTED_ROWS):
 
     cvalue_D = 0 #Found
     cvalue_T = 0 #Found
-    cvalue_N = 0 #Foundaaaaaaaaaaaaa
+    cvalue_N = 0 #Found
     cvalue_R = 0 #Found
     CValue_Final = 0
 
