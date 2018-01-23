@@ -257,8 +257,9 @@ def Run_Polylines(i):
                    deck2['riser_thickness'], deck2['tread_thickness'], deck_pts_temp[i]))
     deck_pline_order.append(i)
 
-
+print type(sect_tree)
 # Run this while loop for each section it has been given
+
 while sect_tree.PathExists(GH_Path(p1_counter, p2_counter)):
     # Count the number of decks in the current section
     deck_count = len(sect_tree.Branch(GH_Path(p1_counter, p2_counter)))
