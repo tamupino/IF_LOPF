@@ -1,5 +1,17 @@
 # Author: Paul F
-
+"""
+Title: Grids for Sections
+Description: creates planes which can be used to host the bowl section profile curves
+-
+Provided by Idea Fellowship 2018.05.25
+    Args:
+        safteyzone_offset_curves, num_corner_div, num_width_div, num_length_div
+        :: List of curves representing the first row of seating along with the numbers of sections should be
+        :: in each side of the bowl
+    Returns
+        T_SweepPlanes
+        :: A tree of planes to host the section profiles
+"""
 
 import Rhino.Geometry as rg
 from decimal import Decimal
@@ -9,8 +21,6 @@ import Grasshopper.Kernel.Data.GH_Path as ghpath
 import Grasshopper.DataTree as DataTree
 import math
 import System.Drawing as sd
-
-
 
 
 # How many seating divisions will there be per segment type (width, length, corners?)
@@ -23,30 +33,28 @@ def Divide_Curves(safteyzone_offset_curves, num_corner_div, num_width_div, num_l
 
     T_SweepPlanes = DataTree[rg.Plane]()
 
-    sorted_curves = []
-    curve_lengths = []
+    sweep_corners = []
+    sweep_widths = []
+    sweep_lengths = []
 
-    # Go through all the curves coming from the boundary and
-    # add them to nested, organized lists within "sorted_curves"
-    for curve in safteyzone_offset_curves:
-        length = round(Decimal(curve.GetLength()),2)
-        if length not in curve_lengths:
-            curve_lengths.append(length)
-            sorted_curves.append([curve])
-        else:
-            index = curve_lengths.index(length)
-            if index >= 0:
-                sorted_curves[index].append(curve)
-
-    # Sort the list...
-    sorted(curve_lengths)
-    # Then sort the list of curve lists by the sorted length list
-    sorted_curves = [x for (y, x) in sorted(zip(curve_lengths, sorted_curves))]
-
-    # Now all the curves can be added to named lists to keep track of them more easily
-    sweep_corners = sorted_curves[0]
-    sweep_widths = sorted_curves[1]
-    sweep_lengths = sorted_curves[2]
+    for i in range (0,len(safteyzone_offset_curves)):
+        curve = safteyzone_offset_curves[i]
+        if i == 0:
+            sweep_widths.append(curve)
+        elif i == 1:
+            sweep_corners.append(curve)
+        elif i == 2:
+            sweep_lengths.append(curve)
+        elif i == 3:
+            sweep_corners.append(curve)
+        elif i == 4:
+            sweep_widths.append(curve)
+        elif i == 5:
+            sweep_corners.append(curve)
+        elif i == 6:
+            sweep_lengths.append(curve)
+        elif i == 7:
+            sweep_corners.append(curve)
 
     # Add points on the curves to specify lengths "grid" divisions
     for curve in sweep_lengths:
