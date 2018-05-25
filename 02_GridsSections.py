@@ -8,6 +8,9 @@ clr.AddReference("Grasshopper")
 import Grasshopper.Kernel.Data.GH_Path as ghpath
 import Grasshopper.DataTree as DataTree
 import math
+import System.Drawing as sd
+
+
 
 
 # How many seating divisions will there be per segment type (width, length, corners?)
