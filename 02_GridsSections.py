@@ -28,10 +28,12 @@ num_corner_div = 4
 num_width_div = 5
 num_length_div = 9
 
-# Divide the curves coming from the field function and make grid lines
+# Divide the curves coming from the field function into sections
 def Divide_Curves(safteyzone_offset_curves, num_corner_div, num_width_div, num_length_div):
 
     T_SweepPlanes = DataTree[rg.Plane]()
+    T_ShatteredCurves = DataTree[rg.Curve]()
+    T_ShatteredLines = DataTree[rg.Line]()
 
     sweep_corners = []
     sweep_widths = []
@@ -62,13 +64,23 @@ def Divide_Curves(safteyzone_offset_curves, num_corner_div, num_width_div, num_l
         path1 = ghpath(1)
         curve.Domain = rg.Interval(0,1)
         tvals = curve.DivideByCount(num_length_div,True)
-        for val in tvals:
+        trimmed_tvals = []
+        for i in range(0, len(tvals) - 1):
+            val = tvals[i]
             point = curve.PointAt(val)
             z_vect = rg.Vector3d.ZAxis
             x_vect = curve.TangentAt(val)
-            x_vect.Rotate(.5 * math.pi,z_vect)
-            plane = rg.Plane(point,x_vect,z_vect)
-            T_SweepPlanes.Add(plane,path1)
+            x_vect.Reverse()
+            x_vect.Rotate(.5 * math.pi, z_vect)
+            plane = rg.Plane(point, x_vect, z_vect)
+            T_SweepPlanes.Add(plane, path1)
+            trimmed_tvals.append(val)
+        shatter = curve.Split(trimmed_tvals)
+        for segment in shatter:
+            segment.Domain = rg.Interval(0, 1)
+            line = rg.Line(segment.PointAt(0),segment.PointAt(1))
+            T_ShatteredLines.Add(line,path1)
+            T_ShatteredCurves.Add(segment, path1)
 
     # Add points on the curves to specify widths "grid" divisions
     for curve in sweep_widths:
@@ -76,13 +88,23 @@ def Divide_Curves(safteyzone_offset_curves, num_corner_div, num_width_div, num_l
         path2 = ghpath(2)
         curve.Domain = rg.Interval(0,1)
         tvals = curve.DivideByCount(num_width_div,True)
-        for val in tvals:
+        trimmed_tvals = []
+        for i in range (0,len(tvals)-1):
+            val = tvals[i]
             point = curve.PointAt(val)
             z_vect = rg.Vector3d.ZAxis
             x_vect = curve.TangentAt(val)
+            x_vect.Reverse()
             x_vect.Rotate(.5 * math.pi,z_vect)
             plane = rg.Plane(point,x_vect,z_vect)
             T_SweepPlanes.Add(plane,path2)
+            trimmed_tvals.append(val)
+        shatter = curve.Split(trimmed_tvals)
+        for segment in shatter:
+            segment.Domain = rg.Interval(0, 1)
+            line = rg.Line(segment.PointAt(0), segment.PointAt(1))
+            T_ShatteredLines.Add(line, path2)
+            T_ShatteredCurves.Add(segment, path2)
 
     # Add points on the curves to specify corners "grid" divisions
     for curve in sweep_corners:
@@ -90,20 +112,69 @@ def Divide_Curves(safteyzone_offset_curves, num_corner_div, num_width_div, num_l
         path3 = ghpath(3)
         curve.Domain = rg.Interval(0, 1)
         tvals = curve.DivideByCount(num_corner_div, True)
-        for val in tvals:
+        trimmed_tvals = []
+        for i in range(0, len(tvals) - 1):
+            val = tvals[i]
             point = curve.PointAt(val)
             z_vect = rg.Vector3d.ZAxis
             x_vect = curve.TangentAt(val)
+            x_vect.Reverse()
             x_vect.Rotate(.5 * math.pi, z_vect)
             plane = rg.Plane(point, x_vect, z_vect)
             T_SweepPlanes.Add(plane, path3)
+            trimmed_tvals.append(val)
+        shatter = curve.Split(trimmed_tvals)
+        for segment in shatter:
+            segment.Domain = rg.Interval(0, 1)
+            line = rg.Line(segment.PointAt(0), segment.PointAt(1))
+            T_ShatteredLines.Add(line, path3)
+            T_ShatteredCurves.Add(segment, path3)
 
-    return T_SweepPlanes
+
+    return T_SweepPlanes,T_ShatteredCurves,T_ShatteredLines
+
+# Helper Function to isolate segments by each main curve
+def SplitList(InputList,PartitionCount):
+    ItemCount = int(len(InputList)/PartitionCount)
+    masterlist = []
+    for i in range(0,PartitionCount):
+        sublist = []
+        for j in range(0,ItemCount):
+            sublist.append(InputList[i*ItemCount + j])
+        masterlist.append(sublist)
+
+    return masterlist
 
 
 
-T_SweepPlanes = Divide_Curves(safetyzone_offset_curves, num_corner_div, num_width_div, num_length_div)
+# Remap the divided curves and points back to the correct field order. IE starting with lower
+# bottom curve and working around clockwise
+def Remap_Points_Curves(T_SweepPlanes,T_ShatteredLines):
+    OrderedSegments = []
+    OrderedPlanes = []
 
+    ShortCurves = SplitList(T_ShatteredLines.Branches[1],2)
+    print len(ShortCurves)
+
+
+    Planes_01 = T_SweepPlanes.Branches[0]
+
+
+
+
+
+# Find an averaged plane between each section for the sweep
+def Average_Planes():
+    pass
+
+
+
+results = Divide_Curves(safetyzone_offset_curves, num_corner_div, num_width_div, num_length_div)
+T_SweepPlanes = results[0]
+T_ShatteredCurves = results[1]
+T_ShatteredLines = results[2]
+
+test = Remap_Points_Curves(T_SweepPlanes,T_ShatteredLines)
 
 
 
